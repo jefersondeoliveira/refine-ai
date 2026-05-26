@@ -97,7 +97,13 @@ export async function handleReadFile(
     };
   }
 
-  const fullPath = nodePath.join(repo.localPath, args.path);
+  const fullPath = nodePath.resolve(repo.localPath, args.path);
+  if (!fullPath.startsWith(nodePath.resolve(repo.localPath) + nodePath.sep) &&
+      fullPath !== nodePath.resolve(repo.localPath)) {
+    return {
+      content: [{ type: "text", text: `Security error: path resolves outside the repository root.` }],
+    };
+  }
   try {
     const { content, truncated, sizeBytes } = readFileTruncated(fullPath);
     const warning = truncated

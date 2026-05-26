@@ -50,7 +50,13 @@ Add to `~/.cursor/mcp.json`:
 
 ### Claude Code
 
-Add to `~/.claude/claude_desktop_config.json`:
+Run in your terminal:
+
+```bash
+claude mcp add refina-ai -- npx -y refina-ai
+```
+
+Or add manually to `~/.claude.json` under `mcpServers`:
 
 ```json
 {
@@ -120,4 +126,4 @@ When conducting technical refinements, follow the workflow in node_modules/refin
 
 ## Cache
 
-Repos are cached at `~/.refina-ai/cache/`. Cache is session-scoped — the same repo is not re-cloned within a session, but starts fresh in new sessions.
+Repos are cached at `~/.refina-ai/cache/`. Within a session, the same repo is not re-cloned. Cached repos are also reused across sessions to avoid redundant network clones — delete `~/.refina-ai/cache/` to force a fresh clone.

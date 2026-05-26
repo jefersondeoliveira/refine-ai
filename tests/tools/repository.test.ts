@@ -122,6 +122,16 @@ describe("handleReadFile", () => {
 
     expect(result.content[0].text).toContain("truncated");
   });
+
+  it("rejects path traversal attempts", async () => {
+    const state = makeState({
+      [REPO_URL]: { url: REPO_URL, localPath: CACHE_PATH, branch: "main", clonedAt: new Date() },
+    });
+
+    const result = await handleReadFile({ url: REPO_URL, path: "../../.ssh/id_rsa" }, state);
+
+    expect(result.content[0].text).toContain("Security error");
+  });
 });
 
 describe("handleSearchInRepo", () => {
