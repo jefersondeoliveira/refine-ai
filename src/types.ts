@@ -33,6 +33,7 @@ export interface ReadFileResult {
 
 export interface ToolResult {
   content: Array<{ type: "text"; text: string }>;
+  [x: string]: unknown;
 }
 
 export interface SessionState {
