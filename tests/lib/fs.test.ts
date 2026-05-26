@@ -1,9 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as nodePath from "node:path";
 
 vi.mock("node:fs");
 
 import * as nodeFs from "node:fs";
 import { readFileTruncated, getDirectoryTree, searchInFiles } from "../../src/lib/fs.js";
+
+const ROOT = nodePath.resolve("/root");
+const ROOT_SRC = nodePath.join(ROOT, "src");
 
 const LIMIT = 50 * 1024;
 
@@ -43,15 +47,15 @@ describe("readFileTruncated", () => {
 describe("getDirectoryTree", () => {
   it("returns files and directories up to the specified depth", () => {
     vi.mocked(nodeFs.readdirSync).mockImplementation((dir: any) => {
-      if (String(dir) === "/root") return ["src", "package.json"] as any;
-      if (String(dir) === "/root/src") return ["index.ts"] as any;
+      if (String(dir) === ROOT) return ["src", "package.json"] as any;
+      if (String(dir) === ROOT_SRC) return ["index.ts"] as any;
       return [] as any;
     });
     vi.mocked(nodeFs.statSync).mockImplementation((p: any) => ({
-      isDirectory: () => String(p) === "/root/src",
+      isDirectory: () => String(p) === ROOT_SRC,
     } as any));
 
-    const tree = getDirectoryTree("/root", 2);
+    const tree = getDirectoryTree(ROOT, 2);
 
     expect(tree).toHaveLength(2);
     expect(tree[0]).toEqual({
@@ -66,7 +70,7 @@ describe("getDirectoryTree", () => {
     vi.mocked(nodeFs.readdirSync).mockReturnValue(["deep"] as any);
     vi.mocked(nodeFs.statSync).mockReturnValue({ isDirectory: () => true } as any);
 
-    const tree = getDirectoryTree("/root", 1);
+    const tree = getDirectoryTree(ROOT, 1);
 
     expect(tree[0].children).toEqual([]);
   });
@@ -82,7 +86,7 @@ describe("searchInFiles", () => {
       "import express\nconst app = express()\napp.listen(3000)"
     );
 
-    const results = searchInFiles("/root", /express/);
+    const results = searchInFiles(ROOT, /express/);
 
     expect(results).toHaveLength(2);
     expect(results[0].line).toBe(1);
@@ -95,6 +99,6 @@ describe("searchInFiles", () => {
     vi.mocked(nodeFs.statSync).mockReturnValue({ isDirectory: () => false, size: 20 } as any);
     vi.mocked(nodeFs.readFileSync).mockReturnValue("no matches here");
 
-    expect(searchInFiles("/root", /kafka/)).toHaveLength(0);
+    expect(searchInFiles(ROOT, /kafka/)).toHaveLength(0);
   });
 });

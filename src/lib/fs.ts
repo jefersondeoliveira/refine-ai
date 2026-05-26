@@ -1,5 +1,5 @@
 import * as nodeFs from "node:fs";
-import * as nodePath from "node:path/posix";
+import * as nodePath from "node:path";
 import type { FileTreeNode, ReadFileResult, SearchResult } from "../types.js";
 
 const FILE_SIZE_LIMIT = 50 * 1024;
