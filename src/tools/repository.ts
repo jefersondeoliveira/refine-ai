@@ -28,8 +28,19 @@ export async function handleCloneRepository(
   const { url, branch } = args;
   const localPath = getCachePath(url);
 
-  if (nodeFs.existsSync(localPath) && state.clonedRepos.has(url)) {
-    return { content: [{ type: "text", text: `Repository already cloned at ${localPath}` }] };
+  if (nodeFs.existsSync(localPath)) {
+    if (state.clonedRepos.has(url)) {
+      // Already cloned and registered in this session
+      return { content: [{ type: "text", text: `Repository already cloned at ${localPath}` }] };
+    }
+    // Dir exists from a prior session; register in state and return success
+    state.clonedRepos.set(url, {
+      url,
+      localPath,
+      branch: branch ?? "default",
+      clonedAt: new Date(),
+    });
+    return { content: [{ type: "text", text: `Successfully cloned ${url} to ${localPath} (cached)` }] };
   }
 
   ensureCacheDir(localPath);
