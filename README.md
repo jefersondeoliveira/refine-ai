@@ -91,6 +91,33 @@ Add to your Devin project configuration:
 | `save_artifact` | Save generated markdown to workspace |
 | `list_artifacts` | List artifacts saved in this session |
 
+## Skill (Workflow Instructions)
+
+The `skills/start-refinement.md` file tells your AI assistant *how* to use the RefineAI tools — in what order, what to look for, and what format to generate.
+
+### Claude Code
+
+```bash
+# Copy to your Claude plugins directory
+cp skills/start-refinement.md ~/.claude/plugins/refina-ai/skills/
+```
+
+### Cursor
+
+Add to `.cursorrules` in your project root:
+
+```
+When the user asks for a refinement or technical spec, follow the workflow in node_modules/refina-ai/skills/start-refinement.md
+```
+
+### GitHub Copilot
+
+Add to `.github/copilot-instructions.md`:
+
+```
+When conducting technical refinements, follow the workflow in node_modules/refina-ai/skills/start-refinement.md
+```
+
 ## Cache
 
 Repos are cached at `~/.refina-ai/cache/`. Cache is session-scoped — the same repo is not re-cloned within a session, but starts fresh in new sessions.
