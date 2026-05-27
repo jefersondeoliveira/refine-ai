@@ -1,8 +1,31 @@
 import * as nodeFs from "node:fs";
 import * as nodePath from "node:path";
+import { spawn } from "node:child_process";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import type { SessionState, ToolResult } from "../types.js";
+
+function openFile(filePath: string): void {
+  try {
+    let command: string;
+    let args: string[];
+
+    if (process.platform === "win32") {
+      command = "cmd";
+      args = ["/c", "start", "", filePath];
+    } else if (process.platform === "darwin") {
+      command = "open";
+      args = [filePath];
+    } else {
+      command = "xdg-open";
+      args = [filePath];
+    }
+
+    spawn(command, args, { detached: true, stdio: "ignore" }).unref();
+  } catch {
+    // best-effort: silently ignore if the OS cannot open the file
+  }
+}
 
 export async function handleSaveArtifact(
   args: { path: string; content: string },
@@ -26,6 +49,8 @@ export async function handleSaveArtifact(
   nodeFs.mkdirSync(nodePath.dirname(fullPath), { recursive: true });
   nodeFs.writeFileSync(fullPath, args.content, "utf-8");
   state.savedArtifacts.push(fullPath);
+
+  openFile(fullPath);
 
   return { content: [{ type: "text", text: `Saved artifact to ${fullPath}` }] };
 }

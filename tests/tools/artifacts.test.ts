@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("node:fs");
+vi.mock("node:child_process");
 
 import * as nodeFs from "node:fs";
 import * as nodePath from "node:path";
+import * as nodeChildProcess from "node:child_process";
 import type { SessionState } from "../../src/types.js";
 import { handleSaveArtifact, handleListArtifacts } from "../../src/tools/artifacts.js";
 
@@ -18,6 +20,7 @@ describe("handleSaveArtifact", () => {
     vi.clearAllMocks();
     vi.mocked(nodeFs.mkdirSync).mockReturnValue(undefined as any);
     vi.mocked(nodeFs.writeFileSync).mockReturnValue(undefined);
+    vi.mocked(nodeChildProcess.spawn).mockReturnValue({ unref: vi.fn() } as any);
   });
 
   it("writes file to workspace and records it in state", async () => {
@@ -33,6 +36,22 @@ describe("handleSaveArtifact", () => {
     expect(nodeFs.writeFileSync).toHaveBeenCalledWith(expected, "# JWT Spec", "utf-8");
     expect(state.savedArtifacts).toContain(expected);
     expect(result.content[0].text).toContain("Saved artifact");
+  });
+
+  it("opens the file after saving", async () => {
+    const state = makeState();
+
+    await handleSaveArtifact(
+      { path: "specs/jwt.md", content: "# JWT Spec" },
+      state,
+      WORKSPACE
+    );
+
+    expect(nodeChildProcess.spawn).toHaveBeenCalledOnce();
+    const spawnArgs = vi.mocked(nodeChildProcess.spawn).mock.calls[0];
+    // last arg in the spawn call should contain the file path
+    const allArgs = [spawnArgs[0], ...spawnArgs[1] as string[]].join(" ");
+    expect(allArgs).toContain("specs");
   });
 
   it("rejects path traversal attempts", async () => {
