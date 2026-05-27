@@ -21,16 +21,40 @@ function renderTree(nodes: FileTreeNode[], indent = ""): string {
     .join("\n");
 }
 
+function isLocalPath(input: string): boolean {
+  // Absolute paths (Unix/Windows) or relative paths starting with ./ or ../
+  return (
+    input.startsWith("/") ||
+    input.startsWith("./") ||
+    input.startsWith("../") ||
+    /^[a-zA-Z]:[/\\]/.test(input) // Windows: C:\ or C:/
+  );
+}
+
 export async function handleCloneRepository(
   args: { url: string; branch?: string },
   state: SessionState
 ): Promise<ToolResult> {
   const { url, branch } = args;
+
+  // Local path: register as-is without cloning
+  if (isLocalPath(url)) {
+    const localPath = nodePath.resolve(url);
+    if (!nodeFs.existsSync(localPath)) {
+      return { content: [{ type: "text", text: `Local path not found: ${localPath}` }] };
+    }
+    if (state.clonedRepos.has(url)) {
+      return { content: [{ type: "text", text: `Already using local repo at ${localPath}` }] };
+    }
+    state.clonedRepos.set(url, { url, localPath, branch: "local", clonedAt: new Date() });
+    return { content: [{ type: "text", text: `Using local repository at ${localPath}` }] };
+  }
+
+  // Remote URL: clone to cache
   const localPath = getCachePath(url);
 
   if (nodeFs.existsSync(localPath)) {
     if (state.clonedRepos.has(url)) {
-      // Already cloned and registered in this session
       return { content: [{ type: "text", text: `Repository already cloned at ${localPath}` }] };
     }
     // Dir exists from a prior session; register in state and return success

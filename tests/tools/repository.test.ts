@@ -65,6 +65,30 @@ describe("handleCloneRepository", () => {
     expect(result.content[0].text).toContain("Auth failed");
     expect(state.clonedRepos.size).toBe(0);
   });
+
+  it("registers a local path without cloning", async () => {
+    const localPath = "/workspace/my-project";
+    vi.mocked(nodeFs.existsSync).mockReturnValue(true);
+    const state = makeState();
+
+    const result = await handleCloneRepository({ url: localPath }, state);
+
+    expect(cloneRepo).not.toHaveBeenCalled();
+    expect(state.clonedRepos.has(localPath)).toBe(true);
+    expect(state.clonedRepos.get(localPath)?.branch).toBe("local");
+    expect(result.content[0].text).toContain("local repository");
+  });
+
+  it("returns error for local path that does not exist", async () => {
+    vi.mocked(nodeFs.existsSync).mockReturnValue(false);
+    const state = makeState();
+
+    const result = await handleCloneRepository({ url: "/workspace/missing-project" }, state);
+
+    expect(cloneRepo).not.toHaveBeenCalled();
+    expect(state.clonedRepos.size).toBe(0);
+    expect(result.content[0].text).toContain("not found");
+  });
 });
 
 describe("handleGetRepoStructure", () => {
