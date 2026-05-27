@@ -29,14 +29,34 @@ Only read files that are directly relevant — do not read everything.
 
 ## Step 4 — Search for impact signals
 
-Use `search_in_repo` to find:
-- Affected endpoints or controllers (e.g. `routes|controller|handler`)
-- Events and queues (e.g. `kafka|publish|subscribe|queue`)
-- Database entities or tables (e.g. `@Entity|@Table|repository`)
-- Auth or security patterns (e.g. `JWT|auth|token|permission`)
-- Inter-service calls (e.g. `feign|RestTemplate|WebClient|fetch|axios`)
+Adapt the patterns to the stack of the repo. Examples by platform:
 
-Adapt the patterns to what the demand is about.
+**Backend / API:**
+- Endpoints: `routes|controller|handler|@GetMapping|@PostMapping`
+- Events: `kafka|publish|subscribe|queue|@KafkaListener`
+- Database: `@Entity|@Table|repository|migration`
+- Auth: `JWT|auth|token|permission|@PreAuthorize`
+- Inter-service: `feign|RestTemplate|WebClient|fetch|axios`
+
+**Web frontend:**
+- Pages / routes: `router|Route|useNavigate|Link`
+- API calls: `fetch|axios|useQuery|useMutation|api\.`
+- State: `useState|useReducer|zustand|redux|store`
+- Auth / permissions: `useAuth|isAuthenticated|role|permission`
+
+**Android:**
+- Screens / navigation: `Fragment|Activity|NavController|navigate(`
+- API calls: `Retrofit|OkHttp|suspend fun|CoroutineScope`
+- Storage: `Room|@Dao|@Entity|SharedPreferences|DataStore`
+- Permissions: `Manifest.permission|requestPermissions|checkSelfPermission`
+- Push / background: `WorkManager|BroadcastReceiver|FirebaseMessaging`
+
+**iOS:**
+- Screens / navigation: `UIViewController|SwiftUI View|NavigationStack|push(`
+- API calls: `URLSession|Alamofire|async throws|await`
+- Storage: `CoreData|NSManagedObject|UserDefaults|@AppStorage`
+- Permissions: `requestAuthorization|NSCamera|NSLocation|NSMicrophone`
+- Push / background: `UNUserNotificationCenter|BGTaskScheduler|APNs`
 
 ## Step 5 — Read key files
 
@@ -46,7 +66,7 @@ Skip test files, lock files, and generated code unless specifically relevant.
 
 ## Step 6 — Generate the spec
 
-Produce a markdown document with the following sections:
+Produce a markdown document with the following sections. Include only sections relevant to the stack — omit sections that don't apply (e.g. no "Events & Queues" for a mobile-only change, no "Affected Screens" for a pure backend change).
 
 ```
 # [Demand Title] — Technical Refinement Spec
@@ -54,17 +74,29 @@ Produce a markdown document with the following sections:
 ## Summary
 One paragraph describing what this change does and why.
 
-## Affected Services
-List of services/repos impacted and how.
+## Affected Services / Repos
+List of services, apps, or repos impacted and how.
 
 ## Affected Endpoints
-List of HTTP routes or methods that will change.
+(Backend / API) HTTP routes or methods that will change.
+
+## Affected Screens / Navigation
+(Mobile / Web) Screens, pages, or navigation flows that change.
 
 ## Events & Queues
-Kafka topics, queues, or async contracts involved.
+(Backend) Kafka topics, queues, or async contracts involved.
 
-## Database Changes
-Tables, entities, or migrations required.
+## Database / Storage Changes
+Tables, entities, migrations, Room DAOs, CoreData models, or local storage affected.
+
+## API Contract Changes
+(Mobile / Web) New, modified, or removed API fields that affect clients.
+
+## Permissions Required
+(Mobile) New OS permissions needed (camera, location, notifications, etc.) and their justification.
+
+## Platform / OS Constraints
+(Mobile) Minimum iOS/Android version impact, App Store / Play Store review implications, background execution limits.
 
 ## Squad Dependencies
 Other squads or systems that need to be involved or notified.
@@ -82,7 +114,7 @@ Functional stories in "As a... I want... So that..." format.
 Technical subtasks per story (implementation, tests, migration, documentation).
 
 ## Test Strategy
-Unit, integration, contract, and E2E coverage needed.
+Unit, integration, contract, E2E, and manual device coverage needed.
 ```
 
 ## Step 7 — Save the artifact
@@ -92,7 +124,10 @@ Confirm to the user where the file was saved.
 
 ## Tips
 
-- In distributed systems, always check for Kafka events and Feign clients before assuming a change is contained to one service.
+- **Backend:** always check for Kafka events and Feign/HTTP clients before assuming a change is contained to one service.
+- **Android:** check `AndroidManifest.xml` early — it reveals permissions, activities, and services in one file.
+- **iOS:** check `Info.plist` and the main `AppDelegate`/`SceneDelegate` early for permissions and lifecycle hooks.
+- **Mobile + API:** if both a mobile app and a backend are in scope, map the API contract changes first — they affect both sides.
 - If the transcript is ambiguous, list the ambiguities as Open Questions rather than making assumptions.
 - Keep Suggested Stories at the functional level; keep implementation details in Subtasks.
 - If a repo is too large to read fully, use `search_in_repo` to navigate — never try to read everything.

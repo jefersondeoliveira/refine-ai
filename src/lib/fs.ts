@@ -5,7 +5,18 @@ import type { FileTreeNode, ReadFileResult, SearchResult } from "../types.js";
 const FILE_SIZE_LIMIT = 50 * 1024;
 
 const IGNORED = new Set([
-  "node_modules", ".git", "dist", "build", ".next", "coverage", "__pycache__",
+  // universal
+  ".git",
+  // web / node
+  "node_modules", "dist", ".next", "coverage",
+  // python
+  "__pycache__", ".venv", "venv",
+  // android
+  ".gradle", ".idea",
+  // ios
+  "Pods", "DerivedData",
+  // generic build output (covers android app/build, ios .build, etc.)
+  "build",
 ]);
 
 export function readFileTruncated(filePath: string): ReadFileResult {
