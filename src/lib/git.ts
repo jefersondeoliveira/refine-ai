@@ -40,23 +40,32 @@ export async function cloneRepo(
   branch?: string,
   credentials?: CloneCredentials
 ): Promise<void> {
-  const git = simpleGit();
   const options: string[] = ["--depth", "1"];
   if (branch) options.push("--branch", branch);
 
-  const env: NodeJS.ProcessEnv = { ...process.env };
-  if (credentials?.httpProxy) {
-    env["HTTPS_PROXY"] = credentials.httpProxy;
-    env["HTTP_PROXY"] = credentials.httpProxy;
-  }
-
+  // Inject username/password directly into the HTTPS URL
   const cloneUrl =
     credentials?.username && credentials?.password
       ? injectCredentials(url, credentials.username, credentials.password)
       : url;
 
+  const git = simpleGit();
+
+  // Set proxy env vars on the git instance when provided
+  if (credentials?.httpProxy) {
+    git.env({
+      ...process.env,
+      // Clear any git directory vars that might interfere with clone
+      GIT_DIR: undefined,
+      GIT_WORK_TREE: undefined,
+      GIT_INDEX_FILE: undefined,
+      HTTPS_PROXY: credentials.httpProxy,
+      HTTP_PROXY: credentials.httpProxy,
+    } as NodeJS.ProcessEnv);
+  }
+
   try {
-    await simpleGit({ config: [] }).env(env).clone(cloneUrl, targetPath, options);
+    await git.clone(cloneUrl, targetPath, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`Failed to clone ${url}: ${message}`);

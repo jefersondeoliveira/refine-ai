@@ -12,8 +12,8 @@ describe("cloneRepo", () => {
   beforeEach(() => {
     mockClone.mockReset();
     mockEnv.mockReset();
-    mockEnv.mockReturnValue({ clone: mockClone });
-    vi.mocked(simpleGit).mockReturnValue({ env: mockEnv } as any);
+    // simpleGit() returns an instance with both .env() and .clone()
+    vi.mocked(simpleGit).mockReturnValue({ env: mockEnv, clone: mockClone } as any);
   });
 
   it("clones repo without branch flag when branch is omitted", async () => {
@@ -48,12 +48,19 @@ describe("cloneRepo", () => {
     expect(calledUrl).toContain("gitlab.corp");
   });
 
-  it("sets HTTPS_PROXY and HTTP_PROXY env vars when http_proxy provided", async () => {
+  it("does not call .env() when no proxy is provided", async () => {
+    mockClone.mockResolvedValue(undefined);
+    await cloneRepo("https://github.com/org/repo.git", "/target");
+    expect(mockEnv).not.toHaveBeenCalled();
+  });
+
+  it("calls .env() with HTTPS_PROXY and HTTP_PROXY when http_proxy is provided", async () => {
     mockClone.mockResolvedValue(undefined);
     const proxy = "http://user:pass@proxy.corp:8080";
     await cloneRepo("https://gitlab.corp/repo.git", "/target", undefined, {
       httpProxy: proxy,
     });
+    expect(mockEnv).toHaveBeenCalledOnce();
     const envArg = mockEnv.mock.calls[0][0] as Record<string, string>;
     expect(envArg["HTTPS_PROXY"]).toBe(proxy);
     expect(envArg["HTTP_PROXY"]).toBe(proxy);
