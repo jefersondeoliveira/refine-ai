@@ -3,7 +3,7 @@ import * as nodeFs from "node:fs";
 import * as os from "node:os";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { cloneRepo } from "../lib/git.js";
+import { cloneRepo, isAuthError } from "../lib/git.js";
 import { getCachePath, ensureCacheDir } from "../lib/cache.js";
 import { getDirectoryTree, readFileTruncated, searchInFiles } from "../lib/fs.js";
 import type { FileTreeNode, SessionState, ToolResult } from "../types.js";
@@ -41,11 +41,16 @@ function expandPath(input: string): string {
   return nodePath.resolve(input);
 }
 
+const AUTH_HINT =
+  `\n\nIf this is an authentication or proxy error, call clone_repository again with:\n` +
+  `- username and password for repository access\n` +
+  `- http_proxy if your network requires a proxy (e.g. "http://user:pass@proxy.corp:8080")`;
+
 export async function handleCloneRepository(
-  args: { url: string; branch?: string },
+  args: { url: string; branch?: string; username?: string; password?: string; http_proxy?: string },
   state: SessionState
 ): Promise<ToolResult> {
-  const { url, branch } = args;
+  const { url, branch, username, password, http_proxy } = args;
 
   // Local path: register as-is without cloning
   if (isLocalPath(url)) {
@@ -80,10 +85,11 @@ export async function handleCloneRepository(
   ensureCacheDir(localPath);
 
   try {
-    await cloneRepo(url, localPath, branch);
+    await cloneRepo(url, localPath, branch, { username, password, httpProxy: http_proxy });
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    return { content: [{ type: "text", text: `Clone failed: ${msg}` }] };
+    const hint = isAuthError(msg) ? AUTH_HINT : "";
+    return { content: [{ type: "text", text: `Clone failed: ${msg}${hint}` }] };
   }
 
   state.clonedRepos.set(url, {
@@ -197,10 +203,19 @@ export async function handleListClonedRepos(state: SessionState): Promise<ToolRe
 export function registerRepositoryTools(server: McpServer, state: SessionState): void {
   server.tool(
     "clone_repository",
-    "Clone a Git repository to local cache for analysis",
+    "Clone a Git repository to local cache for analysis. " +
+    "Also accepts a local directory path (e.g. /home/user/project or C:\\workspace\\project) — in that case no cloning happens. " +
+    "If clone fails with an auth or proxy error, retry with username+password and/or http_proxy.",
     {
-      url: z.string().describe("Git repository URL"),
+      url: z.string().describe(
+        "Git repository URL to clone, OR a local directory path (absolute or ~/relative)"
+      ),
       branch: z.string().optional().describe("Branch to clone (defaults to repo default branch)"),
+      username: z.string().optional().describe("Username for repository authentication"),
+      password: z.string().optional().describe("Password or personal access token for repository authentication"),
+      http_proxy: z.string().optional().describe(
+        "HTTP proxy URL including credentials if required, e.g. http://user:pass@proxy.corp:8080"
+      ),
     },
     (args) => handleCloneRepository(args, state)
   );

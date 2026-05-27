@@ -40,7 +40,7 @@ describe("handleCloneRepository", () => {
 
     const result = await handleCloneRepository({ url: REPO_URL }, state);
 
-    expect(cloneRepo).toHaveBeenCalledWith(REPO_URL, CACHE_PATH, undefined);
+    expect(cloneRepo).toHaveBeenCalledWith(REPO_URL, CACHE_PATH, undefined, expect.any(Object));
     expect(state.clonedRepos.has(REPO_URL)).toBe(true);
     expect(result.content[0].text).toContain("Successfully cloned");
   });
