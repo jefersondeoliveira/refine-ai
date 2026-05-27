@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import * as os from "node:os";
 
 vi.mock("../../src/lib/git.js");
 vi.mock("../../src/lib/cache.js");
@@ -66,7 +67,7 @@ describe("handleCloneRepository", () => {
     expect(state.clonedRepos.size).toBe(0);
   });
 
-  it("registers a local path without cloning", async () => {
+  it("registers a Unix absolute path without cloning", async () => {
     const localPath = "/workspace/my-project";
     vi.mocked(nodeFs.existsSync).mockReturnValue(true);
     const state = makeState();
@@ -76,6 +77,32 @@ describe("handleCloneRepository", () => {
     expect(cloneRepo).not.toHaveBeenCalled();
     expect(state.clonedRepos.has(localPath)).toBe(true);
     expect(state.clonedRepos.get(localPath)?.branch).toBe("local");
+    expect(result.content[0].text).toContain("local repository");
+  });
+
+  it("registers a Windows absolute path (C:\\) without cloning", async () => {
+    const localPath = "C:\\workspace\\my-project";
+    vi.mocked(nodeFs.existsSync).mockReturnValue(true);
+    const state = makeState();
+
+    const result = await handleCloneRepository({ url: localPath }, state);
+
+    expect(cloneRepo).not.toHaveBeenCalled();
+    expect(state.clonedRepos.has(localPath)).toBe(true);
+    expect(result.content[0].text).toContain("local repository");
+  });
+
+  it("registers a tilde path (~/) without cloning and expands to homedir", async () => {
+    const tildePath = "~/projects/my-project";
+    vi.mocked(nodeFs.existsSync).mockReturnValue(true);
+    const state = makeState();
+
+    const result = await handleCloneRepository({ url: tildePath }, state);
+
+    expect(cloneRepo).not.toHaveBeenCalled();
+    expect(state.clonedRepos.has(tildePath)).toBe(true);
+    // stored localPath should be expanded
+    expect(state.clonedRepos.get(tildePath)?.localPath).toContain(os.homedir());
     expect(result.content[0].text).toContain("local repository");
   });
 

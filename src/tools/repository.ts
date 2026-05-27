@@ -1,5 +1,6 @@
 import * as nodePath from "node:path";
 import * as nodeFs from "node:fs";
+import * as os from "node:os";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { cloneRepo } from "../lib/git.js";
@@ -22,13 +23,22 @@ function renderTree(nodes: FileTreeNode[], indent = ""): string {
 }
 
 function isLocalPath(input: string): boolean {
-  // Absolute paths (Unix/Windows) or relative paths starting with ./ or ../
   return (
-    input.startsWith("/") ||
-    input.startsWith("./") ||
-    input.startsWith("../") ||
-    /^[a-zA-Z]:[/\\]/.test(input) // Windows: C:\ or C:/
+    input.startsWith("/") ||          // Unix/Mac/Linux absolute
+    input.startsWith("~") ||          // home dir shorthand (all platforms)
+    input.startsWith("./") ||         // Unix relative
+    input.startsWith("../") ||        // Unix relative parent
+    input.startsWith(".\\") ||        // Windows relative
+    input.startsWith("..\\") ||       // Windows relative parent
+    /^[a-zA-Z]:[/\\]/.test(input)    // Windows absolute: C:\ or C:/
   );
+}
+
+function expandPath(input: string): string {
+  if (input === "~" || input.startsWith("~/") || input.startsWith("~\\")) {
+    return nodePath.join(os.homedir(), input.slice(1));
+  }
+  return nodePath.resolve(input);
 }
 
 export async function handleCloneRepository(
@@ -39,7 +49,7 @@ export async function handleCloneRepository(
 
   // Local path: register as-is without cloning
   if (isLocalPath(url)) {
-    const localPath = nodePath.resolve(url);
+    const localPath = expandPath(url);
     if (!nodeFs.existsSync(localPath)) {
       return { content: [{ type: "text", text: `Local path not found: ${localPath}` }] };
     }
